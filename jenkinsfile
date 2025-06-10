@@ -21,10 +21,13 @@ pipeline {
                 '''
             }
         }
-stage('Test){
-steps{
-sh 'echo "tested "'
+stage('Test'){
+    steps{
+        sh''' npm build'''
+
+    }
 }
+
 }
     }
     post {
