@@ -1,5 +1,6 @@
 pipeline {
     agent any
+
     stages {
         stage('Build') {
             agent {
@@ -13,23 +14,28 @@ pipeline {
                     echo 'Starting Build Process...'
                 }
                 sh '''
-                   ls -la
-                   node --version
-                   npm --version
-                   npm ci
-                   npm run build
+                    ls -la
+                    node --version
+                    npm --version
+                    npm ci
+                    npm run build
                 '''
             }
         }
-stage('Test'){
-    steps{
-        sh''' npm build'''
 
+        stage('Test') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh 'npm test'
+            }
+        }
     }
-}
 
-}
-    }
     post {
         success {
             echo 'Build completed successfully.'
