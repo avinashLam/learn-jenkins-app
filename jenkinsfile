@@ -34,12 +34,6 @@ stage('Test') {
             steps {
                 sh 'npm test'
             }
-             post {
-    always{
-        junit 'jest-results/junit.xml'
-    }
-
-    }
         }
          stage('E2E') {
             agent {
@@ -65,7 +59,7 @@ stage('Test') {
 
     post {
     always{
-        publishHTML([allowMissing:false,alwaysLinkToLastBuild:false,keepAll:false,reportDir:'playwright-report'])
+        junit 'jest-results/junit.xml'
     }
 
     }
