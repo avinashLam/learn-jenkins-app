@@ -1,7 +1,9 @@
 pipeline {
     agent any
-    environment{
-        NETLIFY_PROJECT_ID='e6eb429a-2a00-4fee-82f4-7773c27704f3'
+
+    environment {
+        NETLIFY_PROJECT_ID = 'e6eb429a-2a00-4fee-82f4-7773c27704f3'
+        NETLIFY_AUTH_TOKEN = credentials('netlify-token')
     }
 
     stages {
@@ -25,45 +27,50 @@ pipeline {
                 '''
             }
         }
-        stage('parall'){
-            parallel{
-stage('Test') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'npm test'
-            }
-        }
-         stage('E2E') {
-            agent {
-                docker {
-                    image 'mcr.microsoft.com/playwright:v1.52.0-noble'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh '''
-                npm install -g serve
-                node_modules/.bin/serve -s build & 
-                sleep 10
-                npx playwright test
-                '''
-            }
-        }
-            }
-        }
 
-        
+        stage('Parallel Tests') {
+            parallel {
+                stage('Unit Tests') {
+                    agent {
+                        docker {
+                            image 'node:18-alpine'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        sh '''
+                            npm ci
+                            npm test -- --ci --reporters=default --reporters=jest-junit
+                        '''
+                    }
+                }
+
+                stage('E2E Tests') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.52.0-noble'
+                            reuseNode true
+                        }
+                    }
+                    steps {
+                        sh '''
+                            npm ci
+                            npx playwright install --with-deps
+                            nohup npx serve -s build > serve.log 2>&1 &
+                            sleep 10
+                            curl -I http://localhost:3000 || (echo "Server did not start" && exit 1)
+                            npx playwright test --reporter=junit
+                        '''
+                    }
+                }
+            }
+        }
     }
 
     post {
-    always{
-        junit 'jest-results/junit.xml'
-    }
-
+        always {
+            // Collect both Jest and Playwright JUnit results
+            junit '**/junit.xml'
+        }
     }
 }
